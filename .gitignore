@@ -1,5 +1,6 @@
 src
 Cargo.toml
+Cargo.lock
 
 
 # Added by cargo

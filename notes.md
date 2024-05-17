@@ -6,7 +6,7 @@
 
 for example in python
 
-```
+```py
 def outer_function(x):
     def inner_function(y):
         return x + y
@@ -16,7 +16,7 @@ def outer_function(x):
 **inner function** is able to access x from the outer function, however, this is not possible in rust\
 rust achieves this by using closures
 
-```
+```rs
 fn outer_function(x: i32) -> impl Fn(i32) -> i32 {
     let inner_function = move |y| x + y;
     inner_function
@@ -25,7 +25,7 @@ fn outer_function(x: i32) -> impl Fn(i32) -> i32 {
 
 #### Borrows happen as soon as the closure is defined, not when it is used
 
-```
+```rs
 fn main() {
     let mut list = vec![1, 2, 3];
     println!("Before defining closure: {:?}", list);
@@ -46,7 +46,7 @@ this wont work because declaration of the closure creates an mutable borrow and 
 
 #### A simple example of a declarative Macro that writes code for implementing a trait
 
-```
+```rs
 #[derive(Debug)]
 pub struct Duration {
     earth_years: f64,
@@ -91,7 +91,7 @@ planet!(Neptune, 164.79132);
 
 - this doesn't work because MyStruct implements debug and MyTrait
 
-```
+```rs
 #[derive(Debug)]
 struct MyStruct;
 
@@ -118,7 +118,7 @@ fn main() {
 
 - this works beccause MyStruct can only use its own MyTrait
 
-```
+```rs
 struct MyStruct;
 
 trait MyTrait {
@@ -144,7 +144,7 @@ fn main() {
 
 - this doesnt work because there could be a struct that implements both debug and display
 
-```
+```rs
 struct MyStruct;
 
 trait MyTrait {
@@ -176,7 +176,7 @@ fn main() {
 
 Traits can have different implementations for fields or functions, but they must be specified
 
-```
+```rs
 trait MyTrait {
     const MY_CONST: u8;
     fn foo();
@@ -221,7 +221,7 @@ fn main() {
 
 implement Debug, Display, then implement std::error::Error (can be empty unless you want to override)
 
-```
+```rs
 #[derive(Debug)]
 pub struct MyError;
 
@@ -249,7 +249,7 @@ Fat pointer: a pointer to the data, and the length of the data
   - it first implicit derefs when calling index, which returns a reference. then returns a deref of it
   - its probably because single indexes want to return the owned object
 
-```
+```rs
 use std::ops::{Index, RangeFull};
 
 fn main() {
@@ -273,7 +273,7 @@ automatically turning a &T into a &U, where some amount of \*T would result in a
 
 This is ok!
 
-```
+```rs
 
 let my_string = String::from("Abc");
 let my_str: &str = &my_string;
@@ -282,21 +282,21 @@ let my_str: &str = &my_string;
 
 This is also ok!
 
-```
+```rs
 let my_string = &String::from("hello world");
 let my_str: &str = my_string;
 ```
 
 This is not!
 
-```
+```rs
 let my_string = String::from("hello world");
 let my_str: &str = my_string;
 ```
 
 A custom implemented example
 
-```
+```rs
 use std::ops::Deref;
 
 struct DerefExample<T> {
@@ -369,8 +369,10 @@ https://users.rust-lang.org/t/why-does-map-not-require-a-reference-when-filter-d
 - This is why filter_map gives you the data, since it does a transformation
 
 ## Pattern Matching
+
 Pattern matching does not check match guards, it only checks the arms for exhaustiveness. That's why the following code won't work even though we know its exhaustive, the compiler knows you only checked for Some(x) that isn't exhaustive, so you need another one to exhaust the remaining values of x
-```
+
+```rs
 fn main() {
     let num = Some(4);
 
@@ -379,5 +381,60 @@ fn main() {
         Some(x) if x % 2 != 0 => println!("The number {} is odd", x),
         None => (),
     }
+}
+```
+
+## Lexical lifetimes
+
+Ref<T> and RefMut<T> do not support non-lexical lifetimes, which means they survive until the end of scope, not until when last used
+
+For example, this will not work
+
+```rs
+use std::cell::RefCell;
+
+fn main() {
+    let data = RefCell::new(5);
+
+    let mut borrow_mut = data.borrow_mut();
+    *borrow_mut += 1;
+    // Even though borrow_mut is not used after this, it is still alive
+
+    println!("Final value: {}", *data.borrow());
+}
+```
+
+In "normal", or non-lexical lifetimes, this would work because the compiler would know that borrow_mut is not used after incrementing, so it would be dropped, but in lexical lifetimes, it is not dropped until the end of the scope
+
+This, on the other hand will work as we gave it an explicit scope
+
+```rs
+use std::cell::RefCell;
+
+fn main() {
+    let data = RefCell::new(5);
+
+    {
+        let mut borrow_mut = data.borrow_mut();
+        *borrow_mut += 1;
+    }
+
+    println!("Final value: {}", *data.borrow());
+}
+```
+
+Or we could manually drop it
+
+```rs
+use std::cell::RefCell;
+
+fn main() {
+    let data = RefCell::new(5);
+
+    let mut borrow_mut = data.borrow_mut();
+    *borrow_mut += 1;
+    drop(borrow_mut);
+
+    println!("Final value: {}", *data.borrow());
 }
 ```
