@@ -386,6 +386,8 @@ fn main() {
 
 ## Lexical lifetimes
 
+https://stackoverflow.com/questions/50251487/what-are-non-lexical-lifetimes
+
 Ref<T> and RefMut<T> do not support non-lexical lifetimes, which means they survive until the end of scope, not until when last used
 
 For example, this will not work
