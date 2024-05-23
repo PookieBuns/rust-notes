@@ -440,3 +440,90 @@ fn main() {
     println!("Final value: {}", *data.borrow());
 }
 ```
+
+## Ord, Eq, PartialOrd, PartialEq
+
+### What should I implement???
+
+Follow these rules
+
+- impl PartialEq, #[derive(Eq)] - No warnings, deriving Eq is always fine as it has no extra methods.
+- #[derive(PartialEq)], impl Eq - Unnecessary warning, if it's not necessary (it's considered necessary if struct has generic parameters without Eq bound or has PartialEq-only types).
+- impl PartialOrd, #[derive(Ord)] - Correctness warning.
+- #[derive(PartialOrd)], impl Ord - Correctness warning if Ord implementation isn't trivial (an example of trivial implementation would be self.partial_cmp(other).unwrap()). Unnecessary warning if it's not necessary (it's considered necessary if struct has generic parameters without Ord bound or has PartialOrd-only types).
+  If you implement Partial Ord, you should implement Ord, or else weird things will happen. They should agree with each other most of the time!
+
+### Eq and PartialEq
+
+- a == b is syntactic sugar for PartialEq::eq(&a, &b)
+- Eq doesn't do anything, it just tells the compiler there is a reflexive property even though technically you could have an Eq without
+  For example
+
+```rs
+#[derive(PartialEq)]
+struct Myf32(f32);
+
+// impl PartialEq for Myf32 {
+//     fn eq(&self, other: &Self) -> bool {
+//         self.0.to_bits() == other.0.to_bits()
+//     }
+// }
+
+impl Eq for Myf32 {}
+
+fn main() {
+    let mynan1 = Myf32(std::f32::NAN);
+    let mynan2 = Myf32(std::f32::NAN);
+    println!("{}", mynan1 == mynan2);
+}
+```
+
+This will return false which is logically incorrect because I marked it as Eq but NaN != NaN
+
+## f-string support
+
+varname:? can print debug statements!!!!
+
+```rs
+#[derive(PartialEq, PartialOrd, Debug)]
+struct Myf32(f32);
+
+fn main() {
+    let mynan1 = Myf32(std::f32::NAN);
+    println!("{mynan1:?}")
+}
+```
+
+- if you use #? it runs pretty print!!!
+
+## How to handle a collection of futures???
+
+### Send em all at once!!!
+
+```rs
+        let res = (0..10)
+            .map(|i| (i * 20, i * 20 + 20))
+            .map(|(offset, limit)| {
+                self.leet_code_repository
+                    .get_submissions(session_token, offset, limit)
+            });
+        Ok(try_join_all(res).await?.into_iter().flatten().collect())
+```
+
+### Limit concurrency!
+
+```rs
+        let res = (0..10)
+            .map(|i| (i * 20, i * 20 + 20))
+            .map(|(offset, limit)| {
+                self.leet_code_repository
+                    .get_submissions(session_token, offset, limit)
+            });
+        Ok(futures::stream::iter(res)
+            .buffered(1)
+            .try_collect::<Vec<_>>()
+            .await?
+            .into_iter()
+            .flatten()
+            .collect())
+```
