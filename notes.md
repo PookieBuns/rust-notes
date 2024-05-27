@@ -527,3 +527,45 @@ fn main() {
             .flatten()
             .collect())
 ```
+
+## Breaking from Match and Blocks
+
+[source](https://stackoverflow.com/questions/37814942/early-breaking-from-rusts-match)
+
+In rust, return will return from the function, not the block
+
+In this example, bar will never actually get assigned because the return will return from the function, not the block
+
+```rs
+fn foo() -> i32 {
+    let some = Some(1);
+    let bar = match some {
+        Some(_) => {
+            return 1;
+        }
+        None => {
+            return 0;
+        }
+    };
+    println!("bar: {}", bar);
+    bar
+}
+```
+
+We can use a block label to break from the block and save the value to bar
+
+```rs
+fn foo() -> i32 {
+    let some = Some(1);
+    let bar = match some {
+        Some(_) => 'a: {
+            break 'a 1;
+        }
+        None => 'b:{
+            break 'b 0;
+        }
+    };
+    println!("bar: {}", bar);
+    bar
+}
+```
